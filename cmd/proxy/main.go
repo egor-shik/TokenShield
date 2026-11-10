@@ -12,6 +12,7 @@ import (
 
 	"github.com/egor-shik/tokenshield/internal/config"
 	"github.com/egor-shik/tokenshield/internal/proxy"
+	"github.com/egor-shik/tokenshield/internal/cache"
 )
 
 func main() {
@@ -20,7 +21,21 @@ func main() {
 		log.Fatalf("config: %v", err)
 	}
 
-	p := proxy.NewProxy(cfg.ApiURL)
+	cachePath := os.Getenv("CACHE_PATH")
+	if cachePath == "" {
+		cachePath = "cache.db"
+	}
+
+	c, err := cache.NewCache(cachePath)
+	if err != nil {
+		log.Fatalf("cache init: %v", err)
+	}
+	defer c.Close()
+
+	p, err := proxy.NewProxy(cfg.ApiURL, c)
+	if err != nil {
+		log.Fatalf("proxy: %v", err)
+	}
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,
